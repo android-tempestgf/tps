@@ -1,0 +1,10 @@
+<!-- File: app/src/main/res/values/strings.xml -->
+<resources>
+    <string name="app_name">TripWise</string>
+    <string name="welcome_message">Welcome to TripWise!</string>
+    <string name="trips">Trips</string>
+    <string name="itinerary">Itinerary</string>
+    <string name="about">About</string>
+    <string name="terms">Terms &amp; Conditions</string>
+    <string name="splash_message">Loading...</string>
+</resources>
