@@ -36,6 +36,7 @@ fun TermsScreen(modifier: Modifier = Modifier) {
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
         Text(text = "Términos y Condiciones", modifier = Modifier.padding(16.dp))
         Spacer(modifier = Modifier.height(8.dp))
+        TODO@
         Text(
             text = "Aquí se mostrarán los términos y condiciones de uso de la aplicación. " +
                     "Este texto es de ejemplo y debe ser reemplazado por el contenido real.",
