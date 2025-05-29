@@ -1,24 +1,171 @@
-name: Create release
+name: Build and Release Android App
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.1.0)'
+        required: true
+        default: 'v0.1.0'
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    name: Release pushed tag
-    runs-on: windows-latest
+  build-and-release:
+    name: Build APK and Create Release
+    runs-on: ubuntu-latest
+    
     steps:
-      - name: Create release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Extract version from tag
+        id: extract_version
         run: |
-          gh release create "$tag" \
-              --repo="$GITHUB_REPOSITORY" \
-              --title="${tag#v}" \
-              --generate-notes
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Update version in build.gradle.kts
+        run: |
+          VERSION_NAME="${{ steps.extract_version.outputs.VERSION_NAME }}"
+          sed -i "s/versionName = \".*\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
+          echo "Updated version to: $VERSION_NAME"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Build Debug APK (for testing)
+        run: ./gradlew assembleDebug
+
+      - name: Sign APK (if keystore secrets are available)
+        id: sign_apk
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_FILE }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
+            echo "Keystore secrets found, signing APK..."
+            echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > keystore.jks
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore keystore.jks \
+              -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+              -keypass "${{ secrets.KEY_PASSWORD }}" \
+              app/build/outputs/apk/release/app-release-unsigned.apk \
+              "${{ secrets.KEY_ALIAS }}"
+            echo "signed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No keystore secrets found, using unsigned APK"
+            echo "signed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename APK files
+        run: |
+          VERSION_NAME="${{ steps.extract_version.outputs.VERSION_NAME }}"
+          cd app/build/outputs/apk/release
+          if [ -f "app-release-unsigned.apk" ]; then
+            mv app-release-unsigned.apk "travel-planner-v$VERSION_NAME-release.apk"
+          elif [ -f "app-release.apk" ]; then
+            mv app-release.apk "travel-planner-v$VERSION_NAME-release.apk"
+          fi
+          
+          cd ../debug
+          if [ -f "app-debug.apk" ]; then
+            mv app-debug.apk "travel-planner-v$VERSION_NAME-debug.apk"
+          fi
+
+      - name: Generate APK checksums
+        run: |
+          cd app/build/outputs/apk/release
+          sha256sum *.apk > checksums.txt
+          cd ../debug
+          sha256sum *.apk >> ../release/checksums.txt
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.extract_version.outputs.VERSION }}"
+          echo "Creating release notes for $VERSION"
+          
+          # Extract changelog section for this version
+          if grep -q "## \[${{ steps.extract_version.outputs.VERSION_NAME }}\]" CHANGELOG.md; then
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "## Release $VERSION" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            sed -n "/## \[${{ steps.extract_version.outputs.VERSION_NAME }}\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2 >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📱 Download" >> $GITHUB_OUTPUT
+            echo "- **Release APK**: For production use" >> $GITHUB_OUTPUT
+            echo "- **Debug APK**: For testing and development" >> $GITHUB_OUTPUT
+            echo "- **Checksums**: Verify file integrity with SHA256 checksums" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 🔧 Installation" >> $GITHUB_OUTPUT
+            echo "1. Download the APK file" >> $GITHUB_OUTPUT
+            echo "2. Enable 'Unknown Sources' in Android settings" >> $GITHUB_OUTPUT
+            echo "3. Install the APK" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "## Release $VERSION" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "Travel Planner Android application release." >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📱 Download" >> $GITHUB_OUTPUT
+            echo "- **Release APK**: For production use" >> $GITHUB_OUTPUT
+            echo "- **Debug APK**: For testing and development" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: ncipollo/create-release@v1
+        with:
+          tag: ${{ steps.extract_version.outputs.VERSION }}
+          name: "Travel Planner ${{ steps.extract_version.outputs.VERSION }}"
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: ${{ contains(steps.extract_version.outputs.VERSION, 'alpha') || contains(steps.extract_version.outputs.VERSION, 'beta') || contains(steps.extract_version.outputs.VERSION, 'rc') || startsWith(steps.extract_version.outputs.VERSION_NAME, '0.') }}
+          artifacts: |
+            app/build/outputs/apk/release/travel-planner-v${{ steps.extract_version.outputs.VERSION_NAME }}-release.apk
+            app/build/outputs/apk/debug/travel-planner-v${{ steps.extract_version.outputs.VERSION_NAME }}-debug.apk
+            app/build/outputs/apk/release/checksums.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks-${{ steps.extract_version.outputs.VERSION_NAME }}
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/checksums.txt
+          retention-days: 30

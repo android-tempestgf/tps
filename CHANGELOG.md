@@ -8,15 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- GitHub Actions release workflow for automated APK building
+- Automated release creation with proper semantic versioning
+- APK signing support (when keystore secrets are configured)
+- Release notes generation from CHANGELOG.md
+- Build artifacts upload for CI/CD pipeline
+
+### Changed
+- Updated version to v0.1.0 for initial development release
+- Enhanced release workflow with comprehensive Android build process
+
+## [0.1.0] - 2025-01-09
+
+### Added
 - Comprehensive branching strategy documentation in CONTRIBUTING.md
 - Git Flow workflow implementation
 - Conventional commits specification
 - Pull request template and review process
 - Code standards and testing requirements
+- Initial development release with automated build pipeline
 
 ### Changed
 - Updated CONTRIBUTING.md with detailed workflow guidelines
 - Established proper branch structure with develop branch
+- Migrated to semantic versioning for development releases
 
 ## [1.0.2] - 2025-05-29
 
