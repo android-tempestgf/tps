@@ -1,205 +1,211 @@
-# Release Process
+# Proceso de Releases - Travel Planner
 
-This document outlines the release process for the Travel Planner Android application, including automated builds and GitHub releases.
+Este documento describe el proceso completo para crear releases de la aplicación Travel Planner, incluyendo construcción automatizada y releases de GitHub.
 
-## Overview
+## Visión General
 
-The project uses **semantic versioning** (SemVer) for releases:
-- **v0.x.x**: Initial development releases (pre-release)
-- **v1.x.x**: Stable releases
-- **Patch** (x.x.1): Bug fixes
-- **Minor** (x.1.x): New features (backward compatible)
-- **Major** (1.x.x): Breaking changes
+El proyecto utiliza **versionado semántico** (SemVer) para los releases:
+- **v0.x.x**: Releases de desarrollo inicial (pre-release)
+- **v1.x.x**: Releases estables
+- **Patch** (x.x.1): Correcciones de errores
+- **Minor** (x.1.x): Nuevas funcionalidades (compatibles hacia atrás)
+- **Major** (1.x.x): Cambios incompatibles
 
-## Automated Release Workflow
+## Flujo de Trabajo de Release Automatizado
 
-### GitHub Actions Workflow
+### Workflow de GitHub Actions
 
-The release process is automated using GitHub Actions (`.github/workflows/release.yml`):
+El proceso de release está automatizado usando GitHub Actions (`.github/workflows/release.yml`):
 
-1. **Triggered by**: 
-   - Git tag push (e.g., `git push origin v0.1.0`)
-   - Manual workflow dispatch from GitHub Actions UI
+1. **Activado por**: 
+   - Push de tag de Git (ej., `git push origin v0.1.0`)
+   - Dispatch manual de workflow desde la UI de GitHub Actions
 
-2. **Build Process**:
-   - Sets up Android SDK and JDK 17
-   - Builds both Release and Debug APKs
-   - Optionally signs APKs (if keystore secrets are configured)
-   - Generates SHA256 checksums
-   - Creates GitHub release with downloadable assets
+2. **Proceso de Construcción**:
+   - Configura Android SDK y JDK 17
+   - Construye APKs de Release y Debug
+   - Opcionalmente firma APKs (si los secretos de keystore están configurados)
+   - Genera checksums SHA256
+   - Crea release de GitHub con assets descargables
 
-3. **Release Assets**:
-   - `travel-planner-vX.X.X-release.apk` - Production APK
-   - `travel-planner-vX.X.X-debug.apk` - Debug APK
-   - `checksums.txt` - SHA256 checksums for verification
+3. **Assets del Release**:
+   - `travel-planner-vX.X.X-release.apk` - APK de producción
+   - `travel-planner-vX.X.X-debug.apk` - APK de debug
+   - `checksums.txt` - Checksums SHA256 para verificación
 
-### Pre-release vs Stable Releases
+### Pre-releases vs Releases Estables
 
-- **Pre-release**: Versions starting with `0.` or containing `alpha`, `beta`, `rc`
-- **Stable**: Versions starting with `1.` or higher without pre-release identifiers
+- **Pre-release**: Versiones que empiezan con `0.` o contienen `alpha`, `beta`, `rc`
+- **Estable**: Versiones que empiezan con `1.` o superior sin identificadores de pre-release
 
-## Creating a Release
+## Crear un Release
 
-### Method 1: Using Release Scripts (Recommended)
+### Método 1: Usando Scripts de Release (Recomendado)
 
-#### On Linux/macOS:
+#### En Linux/macOS:
 ```bash
-# Make script executable (first time only)
+# Hacer el script ejecutable (solo la primera vez)
 chmod +x scripts/create-release.sh
 
-# Run the release script
+# Ejecutar el script de release
 ./scripts/create-release.sh
 ```
 
-#### On Windows:
+#### En Windows:
 ```cmd
-# Run the release script
+# Ejecutar el script de release
 scripts\create-release.bat
 ```
 
-The script will:
-1. Check that you're on `main` or `develop` branch
-2. Verify working directory is clean
-3. Show current version and suggest next versions
-4. Update `app/build.gradle.kts` with new version
-5. Commit changes and create a git tag
-6. Push tag to trigger automated build
+El script realizará:
+1. Verificar que estés en la rama `main` o `develop`
+2. Verificar que el directorio de trabajo esté limpio
+3. Mostrar la versión actual y sugerir próximas versiones
+4. Actualizar `app/build.gradle.kts` con la nueva versión
+5. Confirmar cambios y crear un tag de git
+6. Subir el tag para activar la construcción automatizada
 
-### Method 2: Manual Process
+### Método 2: Proceso Manual
 
-1. **Update Version**:
+1. **Actualizar Versión**:
    ```kotlin
-   // In app/build.gradle.kts
-   versionName = "0.2.0"  // Update to new version
+   // En app/build.gradle.kts
+   versionName = "0.2.0"  // Actualizar a nueva versión
    ```
 
-2. **Update CHANGELOG.md**:
+2. **Actualizar CHANGELOG.md**:
    ```markdown
    ## [0.2.0] - 2025-01-09
    
-   ### Added
-   - New feature descriptions
+   ### Añadido
+   - Descripciones de nuevas funcionalidades
    
-   ### Changed
-   - Changed feature descriptions
+   ### Cambiado
+   - Descripciones de funcionalidades modificadas
    
-   ### Fixed
-   - Bug fix descriptions
+   ### Corregido
+   - Descripciones de correcciones de errores
    ```
 
-3. **Commit and Tag**:
+3. **Confirmar y Etiquetar**:
    ```bash
    git add app/build.gradle.kts CHANGELOG.md
-   git commit -m "chore: bump version to v0.2.0"
+   git commit -m "chore: actualizar versión a v0.2.0"
    git tag -a v0.2.0 -m "Release v0.2.0"
-   git push origin develop  # or main
+   git push origin develop  # o main
    git push origin v0.2.0
    ```
 
-### Method 3: GitHub Actions Manual Trigger
+### Método 3: Activación Manual de GitHub Actions
 
-1. Go to GitHub Actions in your repository
-2. Select "Build and Release Android App" workflow
-3. Click "Run workflow"
-4. Enter the version (e.g., `v0.1.0`)
-5. Click "Run workflow"
+1. Ve a GitHub Actions en tu repositorio
+2. Selecciona el workflow "Build and Release Android App"
+3. Haz clic en "Run workflow"
+4. Introduce la versión (ej., `v0.1.0`)
+5. Haz clic en "Run workflow"
 
-## APK Signing (Optional)
+## Firma de APK (Opcional)
 
-To enable APK signing for production releases, add these secrets to your GitHub repository:
+Para habilitar la firma de APK para releases de producción, añade estos secretos a tu repositorio de GitHub:
 
-1. Go to Settings → Secrets and variables → Actions
-2. Add the following repository secrets:
-   - `KEYSTORE_FILE`: Base64-encoded keystore file (`base64 -w 0 your-keystore.jks`)
-   - `KEYSTORE_PASSWORD`: Keystore password
-   - `KEY_ALIAS`: Key alias name
-   - `KEY_PASSWORD`: Key password
+1. Ve a Settings → Secrets and variables → Actions
+2. Añade los siguientes secretos del repositorio:
+   - `KEYSTORE_FILE`: Archivo keystore codificado en base64 (`base64 -w 0 tu-keystore.jks`)
+   - `KEYSTORE_PASSWORD`: Contraseña del keystore
+   - `KEY_ALIAS`: Nombre del alias de la clave
+   - `KEY_PASSWORD`: Contraseña de la clave
 
-## Release Checklist
+## Lista de Verificación para Release
 
-Before creating a release:
+Antes de crear un release:
 
-- [ ] All tests pass
-- [ ] Code review completed (for major releases)
-- [ ] CHANGELOG.md updated with release notes
-- [ ] Version number follows semantic versioning
-- [ ] Working directory is clean (no uncommitted changes)
-- [ ] On correct branch (`main` for stable, `develop` for pre-release)
+- [ ] Todas las pruebas pasan
+- [ ] Revisión de código completada (para releases mayores)
+- [ ] CHANGELOG.md actualizado con notas del release
+- [ ] Número de versión sigue versionado semántico
+- [ ] Directorio de trabajo limpio (sin cambios sin confirmar)
+- [ ] En la rama correcta (`main` para estable, `develop` para pre-release)
 
-## Release Notes
+## Notas de Release
 
-Release notes are automatically generated from CHANGELOG.md. Ensure your changelog entries are well-formatted:
+Las notas de release se generan automáticamente desde CHANGELOG.md. Asegúrate de que tus entradas de changelog estén bien formateadas:
 
 ```markdown
 ## [X.X.X] - YYYY-MM-DD
 
-### Added
-- New features and capabilities
+### Añadido
+- Nuevas funcionalidades y capacidades
 
-### Changed
-- Changes to existing functionality
+### Cambiado
+- Cambios a funcionalidades existentes
 
-### Deprecated
-- Features that will be removed in future versions
+### Obsoleto
+- Funcionalidades que serán removidas en versiones futuras
 
-### Removed
-- Features that have been removed
+### Removido
+- Funcionalidades que han sido removidas
 
-### Fixed
-- Bug fixes
+### Corregido
+- Correcciones de errores
 
-### Security
-- Security-related fixes
+### Seguridad
+- Correcciones relacionadas con seguridad
 ```
 
-## Troubleshooting
+## Solución de Problemas
 
-### Build Failures
+### Fallos de Construcción
 
-1. **Gradle Build Fails**:
-   - Check Java version (should be JDK 17)
-   - Verify Android SDK is properly set up
-   - Check for dependency conflicts
+1. **Fallo de Gradle Build**:
+   - Verificar versión de Java (debería ser JDK 17)
+   - Verificar que Android SDK esté configurado correctamente
+   - Verificar conflictos de dependencias
 
-2. **APK Signing Fails**:
-   - Verify keystore secrets are correctly configured
-   - Check keystore file is valid and base64-encoded correctly
+2. **Fallo de Firma de APK**:
+   - Verificar que los secretos de keystore estén configurados correctamente
+   - Verificar que el archivo keystore sea válido y esté codificado en base64 correctamente
 
-3. **Release Creation Fails**:
-   - Ensure GitHub token has proper permissions
-   - Check if tag already exists
-   - Verify release workflow syntax
+3. **Fallo de Creación de Release**:
+   - Asegurar que el token de GitHub tenga permisos apropiados
+   - Verificar si el tag ya existe
+   - Verificar sintaxis del workflow de release
 
-### Version Conflicts
+### Conflictos de Versión
 
-If you accidentally create a release with the wrong version:
+Si accidentalmente creas un release con la versión incorrecta:
 
-1. **Delete the tag**:
+1. **Eliminar el tag**:
    ```bash
-   git tag -d v0.1.0           # Delete locally
-   git push origin :v0.1.0     # Delete on remote
+   git tag -d v0.1.0           # Eliminar localmente
+   git push origin :v0.1.0     # Eliminar en remoto
    ```
 
-2. **Delete the GitHub release** (if created)
-3. **Fix the version** and create a new release
+2. **Eliminar el release de GitHub** (si fue creado)
+3. **Corregir la versión** y crear un nuevo release
 
-## Monitoring Releases
+## Monitoreo de Releases
 
-- **GitHub Actions**: Monitor build progress in the Actions tab
-- **GitHub Releases**: View all releases in the Releases section
-- **APK Downloads**: Track download statistics in GitHub insights
+- **GitHub Actions**: Monitorear progreso de construcción en la pestaña Actions
+- **GitHub Releases**: Ver todos los releases en la sección Releases
+- **Descargas de APK**: Seguir estadísticas de descarga en insights de GitHub
 
-## Security Considerations
+## Consideraciones de Seguridad
 
-- Keep keystore files and passwords secure
-- Use repository secrets for sensitive information
-- Regularly audit access to repository secrets
-- Consider using different keystores for debug/release builds
+- Mantener archivos keystore y contraseñas seguros
+- Usar secretos de repositorio para información sensible
+- Auditar regularmente acceso a secretos de repositorio
+- Considerar usar keystores diferentes para builds debug/release
 
-## Future Improvements
+## Mejoras Futuras
 
-- Add automated testing before release
-- Implement code signing verification
-- Add release candidate (RC) workflow
-- Integrate with app stores (Google Play Store)
-- Add crash reporting and analytics tracking
+- Añadir pruebas automatizadas antes del release
+- Implementar verificación de firma de código
+- Añadir workflow de candidato a release (RC)
+- Integrar con tiendas de apps (Google Play Store)
+- Añadir seguimiento de crashes y analytics
+
+---
+
+*Documento actualizado: Enero 2025*  
+*Versión: 1.0*  
+*Proyecto: Travel Planner Scaffolding (TPS)*
